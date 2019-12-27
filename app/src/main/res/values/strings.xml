@@ -9,4 +9,8 @@
     <string name="no_rss_feed_long">The feed that you\'ve provided is invalid.</string>
     <string name="precaching_started">Precaching started…</string>
     <string name="precaching_complete">Precaching complete.</string>
+
+    <string name="saved_high_score_default_key">https://news.tut.by/rss/index.rss</string>
+    <string name="saved_high_score_key">Precaching complete.</string>
+    <string name="title_rss_channel">Title</string>
 </resources>

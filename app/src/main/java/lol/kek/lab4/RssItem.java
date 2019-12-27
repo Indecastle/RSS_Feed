@@ -2,6 +2,7 @@ package lol.kek.lab4;
 
 import android.os.AsyncTask;
 import android.util.Log;
+import android.util.Pair;
 import android.widget.ArrayAdapter;
 
 import org.jsoup.Jsoup;
@@ -21,18 +22,24 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 public class RssItem {
+    private int id;
     private final String imageUrl;
     private String title;
     private String description;
     private Date pubDate;
     private String link;
 
+    public RssItem(int id, String title, String description, Date pubDate, String link, String imageUrl) {
+        this(title, description, pubDate, link, imageUrl);
+        this.id = id;
+    }
+
     public RssItem(String title, String description, Date pubDate, String link, String imageUrl) {
         this.title = title;
         this.description = description;
         this.pubDate = pubDate;
-        this.imageUrl = imageUrl;
         this.link = link;
+        this.imageUrl = imageUrl;
     }
 
     public String getTitle()
@@ -69,9 +76,10 @@ public class RssItem {
     }
 
 
-    public static ArrayList<RssItem> getRssItems(InputStream stream) {
+    public static Pair<String, ArrayList<RssItem>> getRssItems(InputStream stream) {
 
         ArrayList<RssItem> rssItems = new ArrayList<RssItem>();
+        String title = "";
 
         try {
             //DocumentBuilderFactory, DocumentBuilder are used for
@@ -84,6 +92,11 @@ public class RssItem {
             //it to Element
             Document document = db.parse(stream);
             Element element = document.getDocumentElement();
+
+            NodeList nodeChannel = element.getElementsByTagName("channel");
+            Element elementChannel = (Element)nodeChannel.item(0);
+            Element elementTitle = (Element)elementChannel.getElementsByTagName("title").item(0);
+            title = elementTitle.getFirstChild().getNodeValue();
 
             //take rss nodes to NodeList
             NodeList nodeList = element.getElementsByTagName("item");
@@ -121,7 +134,7 @@ public class RssItem {
         catch (Exception e) {
             e.printStackTrace();
         }
-        return rssItems;
+        return new Pair<String, ArrayList<RssItem>>(title, rssItems);
     }
 
 
@@ -142,5 +155,9 @@ public class RssItem {
     static private String extractOnlyText(String description) {
         org.jsoup.nodes.Document document = Jsoup.parse(description);
         return document.text();
+    }
+
+    public int getId() {
+        return id;
     }
 }

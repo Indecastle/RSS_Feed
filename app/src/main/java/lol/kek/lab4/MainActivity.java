@@ -4,9 +4,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,6 +19,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.InputStream;
@@ -26,12 +30,15 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class MainActivity extends AppCompatActivity {
 
-    String feedUrl = "https://news.tut.by/rss/index.rss";
+    String feedUrl;
     ArrayList<RssItem> rssItems = new ArrayList<RssItem>();
     ArrayAdapter<RssItem> adapter = null;
+    private DatabaseAdapter adapterDB;
+    SharedPreferences sharedPref;
 
     ListView rssListView = null;
     SwipeRefreshLayout swipeRefreshLayout;
+    TextView titleTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         swipeRefreshLayout = findViewById(R.id.pullToRefresh);
+        rssListView = (ListView) findViewById(R.id.list);
+        titleTextView = (TextView) findViewById(R.id.titleTextView);
 
         swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
@@ -47,8 +56,12 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+        String defaultValue = getResources().getString(R.string.saved_high_score_default_key);
+        feedUrl = sharedPref.getString(getString(R.string.saved_high_score_key), defaultValue);
+
+        adapterDB = new DatabaseAdapter(this);
         //requestNewFeedURL();
-        rssListView = (ListView) findViewById(R.id.list);
         adapter = new NewsProvider(this, R.layout.listview_item, rssItems);
         rssListView.setAdapter(adapter);
         rssListView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
@@ -98,6 +111,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 feedUrl = editText.getText().toString();
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString(getString(R.string.saved_high_score_key), feedUrl);
+                editor.commit();
                 Toast.makeText(getApplicationContext(), feedUrl, Toast.LENGTH_SHORT).show();
                 refreshNow();
                 dialogBuilder.dismiss();
@@ -115,33 +131,52 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshNow() {
-        new TestConnectionNew().execute(feedUrl);
+        new GetRssItems().execute(feedUrl);
     }
 
 
 
 
-    public class TestConnectionNew extends AsyncTask<String, Void, Void> {
+    public class GetRssItems extends AsyncTask<String, Void, Void> {
         ArrayList<RssItem> rssItemsNew = new ArrayList<RssItem>();
+        Boolean isConnect = false;
+        Pair<String, ArrayList<RssItem>> pair;
+
+        @Override
+        protected void onPreExecute() {
+            isConnect = ConnectivityHelper.isConnectedToNetwork(getBaseContext());
+            if(isConnect) {
+                Toast.makeText(getApplicationContext(),"Connecting",Toast.LENGTH_SHORT).show();
+            }
+            else {
+                Toast.makeText(getApplicationContext(),"Disconnecting",Toast.LENGTH_SHORT).show();
+            }
+        }
+
         @Override
         protected Void doInBackground(String... feedUrl) {
 
-            // TODO Auto-generated method stub
             try {
-                //open an URL connection make GET to the server and
-                //take xml RSS data
-                URL url = new URL(feedUrl[0]);
-                HttpsURLConnection.setFollowRedirects(false);
-                HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
-                conn.setRequestMethod( "GET" );
-
-                conn.connect();
-                int code = conn.getResponseCode();
-                if (code == HttpsURLConnection.HTTP_OK) {
-                    InputStream stream = conn.getInputStream();
-
-                    rssItemsNew = RssItem.getRssItems(stream);
-
+                if(isConnect) {
+                    //open an URL connection make GET to the server and
+                    //take xml RSS data
+                    URL url = new URL(feedUrl[0]);
+                    HttpsURLConnection.setFollowRedirects(false);
+                    HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
+                    conn.setRequestMethod( "GET" );
+                    conn.connect();
+                    int code = conn.getResponseCode();
+                    if (code == HttpsURLConnection.HTTP_OK) {
+                        InputStream stream = conn.getInputStream();
+                        pair = RssItem.getRssItems(stream);
+                        rssItemsNew = pair.second;
+                        return null;
+                    }
+                }
+                else {
+                    adapterDB.open();
+                    rssItemsNew = adapterDB.getRsses();
+                    adapterDB.close();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -154,12 +189,39 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void aVoid) {
             rssItems.clear();
             rssItems.addAll(rssItemsNew);
+            if(isConnect) {
+                new updateDB().execute();
+                titleTextView.setText(pair.first);
+                sharedPref = MainActivity.this.getPreferences(Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sharedPref.edit();
+                editor.putString(getString(R.string.title_rss_channel), pair.first);
+                editor.commit();
+            }
+            else {
+                sharedPref = MainActivity.this.getPreferences(Context.MODE_PRIVATE);
+                String OldTitleValue = sharedPref.getString(getString(R.string.title_rss_channel), getString(R.string.title_rss_channel));
+                titleTextView.setText(OldTitleValue);
+            }
 
             adapter.notifyDataSetChanged();
             rssListView.invalidateViews();
             rssListView.refreshDrawableState();
 
             swipeRefreshLayout.setRefreshing(false);
+        }
+    }
+
+    public class updateDB extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected Void doInBackground(Void... aVoid) {
+            try {
+                adapterDB.open();
+                adapterDB.refreshDB(rssItems);
+                adapterDB.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return null;
         }
     }
 }

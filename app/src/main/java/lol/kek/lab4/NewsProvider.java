@@ -49,7 +49,7 @@ public class NewsProvider extends ArrayAdapter<RssItem> {
         Picasso.get()
                 .load(rss.getImageUrl())
                 .noFade()
-                .resize(128, 128)
+                .resize(200, 200)
                 .centerInside()
                 .placeholder(R.drawable.newspaper)
                 .into(viewHolder.docIcon);
