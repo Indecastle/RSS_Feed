@@ -37,7 +37,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + COLUMN_DESCR + " TEXT, " + COLUMN_PUBDATE + " LONG," + COLUMN_LINK
                 + " TEXT, " + COLUMN_IMAGEURL + " TEXT);" );
         long curentDate = new Date().getTime();
-        // добавление начальных данных
+
         db.execSQL("INSERT INTO "+ TABLE +" (" + COLUMN_TITLE + ", " + COLUMN_DESCR + ", "
                 + COLUMN_PUBDATE  + ", " + COLUMN_LINK + ", " + COLUMN_IMAGEURL + ") VALUES ('TITLE1', 'SIMPLE TEXT1', '" +  curentDate + "', 'link1', 'link2');");
     }

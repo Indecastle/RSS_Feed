@@ -2,8 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/buttonChangeURL"
+        android:icon="@drawable/ic_rss_black_24dp"
         android:title=""
-        app:showAsAction="always"
-        android:icon="@drawable/rss"
-        />
+        app:showAsAction="always" />
 </menu>

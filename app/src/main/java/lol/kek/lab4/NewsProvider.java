@@ -48,7 +48,6 @@ public class NewsProvider extends ArrayAdapter<RssItem> {
         viewHolder.pubdateView.setText(rss.getPubDate().toString());
         Picasso.get()
                 .load(rss.getImageUrl())
-                .noFade()
                 .resize(200, 200)
                 .centerInside()
                 .placeholder(R.drawable.newspaper)

@@ -66,16 +66,8 @@ public class RssItem {
         return this.pubDate;
     }
 
-    @Override
-    public String toString() {
 
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/dd - hh:mm:ss");
-
-        String result = getTitle() + "  ( " + sdf.format(this.getPubDate()) + " )";
-        return result;
-    }
-
-
+    
     public static Pair<String, ArrayList<RssItem>> getRssItems(InputStream stream) {
 
         ArrayList<RssItem> rssItems = new ArrayList<RssItem>();
